@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pong Game</title>
+  <style>
+    canvas {
+      display: block;
+      margin: auto;
+      background-color: rgb(20, 160, 133); /* Dark_Green */
+    }
+  </style>
+</head>
+<body>
+<canvas id="gameCanvas" width="1100" height="650"></canvas>
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const screenWidth = canvas.width;
+const screenHeight = canvas.height;
+
+// Colors
+const Green = "rgb(38,185,154)";
+const Dark_Green = "rgb(20,160,133)";
+const Light_Green = "rgb(129,204,184)";
+const Yellow = "rgb(243,213,91)";
+
+let playerScore = 0;
+let cpuScore = 0;
+
+class Ball {
+  constructor() {
+    this.radius = 25;
+    this.reset();
+  }
+
+  reset() {
+    this.x = screenWidth / 2;
+    this.y = screenHeight / 2;
+    const speed = 7;
+    this.speedX = Math.random() < 0.5 ? speed : -speed;
+    this.speedY = Math.random() < 0.5 ? speed : -speed;
+  }
+
+  update() {
+    this.x += this.speedX;
+    this.y += this.speedY;
+
+    if (this.y + this.radius >= screenHeight || this.y - this.radius <= 0) {
+      this.speedY *= -1;
+    }
+
+    if (this.x + this.radius >= screenWidth) {
+      cpuScore++;
+      this.reset();
+    }
+    if (this.x - this.radius <= 0) {
+      playerScore++;
+      this.reset();
+    }
+  }
+
+  draw() {
+    ctx.fillStyle = Yellow;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+class Paddle {
+  constructor(x, isPlayer = false) {
+    this.x = x;
+    this.y = screenHeight / 2 - 60;
+    this.width = 20;
+    this.height = 120;
+    this.speed = isPlayer ? 6 : 5;
+    this.isPlayer = isPlayer;
+  }
+
+  draw() {
+    ctx.fillStyle = "white";
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+  }
+
+  update(ballY = null) {
+    if (this.isPlayer) {
+      if (keys["ArrowUp"] || keys["w"]) this.y -= this.speed;
+      if (keys["ArrowDown"] || keys["s"]) this.y += this.speed;
+
+      // Mouse input
+      if (mouseDown && mouseX > screenWidth / 2) {
+        this.y = mouseY - this.height / 2;
+      }
+    } else {
+      if (ballY) {
+        if (this.y + this.height / 2 > ballY) this.y -= this.speed;
+        if (this.y + this.height / 2 < ballY) this.y += this.speed;
+      }
+    }
+
+    // Limit movement
+    if (this.y < 0) this.y = 0;
+    if (this.y + this.height > screenHeight) this.y = screenHeight - this.height;
+  }
+}
+
+function checkCollision(ball, paddle) {
+  return (
+    ball.x + ball.radius > paddle.x &&
+    ball.x - ball.radius < paddle.x + paddle.width &&
+    ball.y + ball.radius > paddle.y &&
+    ball.y - ball.radius < paddle.y + paddle.height
+  );
+}
+
+// Initialize game objects
+const ball = new Ball();
+const player = new Paddle(screenWidth - 30, true);
+const cpu = new Paddle(10, false);
+
+// Input handling
+const keys = {};
+let mouseX = 0;
+let mouseY = 0;
+let mouseDown = false;
+
+window.addEventListener("keydown", (e) => keys[e.key.toLowerCase()] = true);
+window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
+canvas.addEventListener("mousedown", () => mouseDown = true);
+canvas.addEventListener("mouseup", () => mouseDown = false);
+canvas.addEventListener("mousemove", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+  mouseY = e.clientY - rect.top;
+});
+
+function drawScores() {
+  ctx.fillStyle = "white";
+  ctx.font = "80px Arial";
+  ctx.fillText(cpuScore, screenWidth / 4 - 20, 80);
+  ctx.fillText(playerScore, (3 * screenWidth) / 4 - 20, 80);
+}
+
+function drawBackground() {
+  ctx.fillStyle = Green;
+  ctx.fillRect(screenWidth / 2, 0, screenWidth / 2, screenHeight);
+
+  ctx.fillStyle = Light_Green;
+  ctx.beginPath();
+  ctx.arc(screenWidth / 2, screenHeight / 2, 140, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "white";
+  ctx.beginPath();
+  ctx.moveTo(screenWidth / 2, 0);
+  ctx.lineTo(screenWidth / 2, screenHeight);
+  ctx.stroke();
+}
+
+function gameLoop() {
+  ctx.clearRect(0, 0, screenWidth, screenHeight);
+  drawBackground();
+
+  ball.update();
+  ball.draw();
+
+  player.update();
+  player.draw();
+
+  cpu.update(ball.y);
+  cpu.draw();
+
+  if (checkCollision(ball, player) || checkCollision(ball, cpu)) {
+    ball.speedX *= -1;
+  }
+
+  drawScores();
+
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>
